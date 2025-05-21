@@ -14,7 +14,7 @@ export default function MapScreen() {
   const [routeCoords, setRouteCoords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const GOOGLE_API_KEY = 'TU_API_KEY'; // ⚠️ Reemplaza esto
+  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
 
   const fetchRoute = async () => {
     const originParam = `${origin.latitude},${origin.longitude}`;

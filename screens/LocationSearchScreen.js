@@ -9,7 +9,7 @@ export default function LocationSearchScreen() {
   const [destination, setDestination] = useState(null);
   const navigation = useNavigation();
 
-  const GOOGLE_API_KEY = 'TU_API_KEY'; // ⚠️ Reemplaza esto
+  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
 
   const handleConfirm = () => {
     if (origin && destination) {
