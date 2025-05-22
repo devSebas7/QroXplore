@@ -1,107 +1,126 @@
 // screens/LocationSearchScreen.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { useNavigation } from '@react-navigation/native';
+import {
+  View,
+  TextInput,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Button,
+  Keyboard,
+} from 'react-native';
 
-export default function LocationSearchScreen() {
-  const [origin, setOrigin] = useState(null);
-  const [destination, setDestination] = useState(null);
-  const navigation = useNavigation();
+const LocationSearchScreen = ({ navigation }) => {
+  const [originQuery, setOriginQuery] = useState('');
+  const [destinationQuery, setDestinationQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedOrigin, setSelectedOrigin] = useState(null);
+  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [activeInput, setActiveInput] = useState(null); // 'origin' | 'destination'
 
-  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
-
-  const handleConfirm = () => {
-    if (origin && destination) {
-      navigation.navigate('MapScreen', {
-        origin,
-        destination,
-      });
+  const fetchSuggestions = async (text) => {
+    if (text.length < 2) {
+      setSuggestions([]);
+      return;
     }
+
+    try {
+      const response = await fetch(`http://10.0.2.2:3000/search?q=${text}`);
+      const data = await response.json();
+      setSuggestions(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleSelect = (item) => {
+    if (activeInput === 'origin') {
+      setSelectedOrigin(item);
+      setOriginQuery(item.name);
+    } else if (activeInput === 'destination') {
+      setSelectedDestination(item);
+      setDestinationQuery(item.name);
+    }
+
+    setSuggestions([]);
+    Keyboard.dismiss();
+  };
+
+  const goToMap = () => {
+    if (!selectedOrigin || !selectedDestination) {
+      alert('Selecciona tanto el origen como el destino');
+      return;
+    }
+
+    navigation.navigate('MapScreen', {
+      origin: selectedOrigin,
+      destination: selectedDestination,
+    });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>¿A dónde quieres ir?</Text>
-
-      <GooglePlacesAutocomplete
-        placeholder="Punto de partida"
-        onPress={(data, details = null) => {
-          const location = details.geometry.location;
-          setOrigin({
-            name: data.description,
-            latitude: location.lat,
-            longitude: location.lng,
-          });
+      <Text style={styles.label}>Origen</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Selecciona origen"
+        value={originQuery}
+        onChangeText={(text) => {
+          setOriginQuery(text);
+          setActiveInput('origin');
+          fetchSuggestions(text);
         }}
-        fetchDetails
-        query={{
-          key: GOOGLE_API_KEY,
-          language: 'es',
-          region: 'mx',
-        }}
-        styles={autoCompleteStyles}
       />
 
-      <GooglePlacesAutocomplete
-        placeholder="Destino"
-        onPress={(data, details = null) => {
-          const location = details.geometry.location;
-          setDestination({
-            name: data.description,
-            latitude: location.lat,
-            longitude: location.lng,
-          });
+      <Text style={styles.label}>Destino</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Selecciona destino"
+        value={destinationQuery}
+        onChangeText={(text) => {
+          setDestinationQuery(text);
+          setActiveInput('destination');
+          fetchSuggestions(text);
         }}
-        fetchDetails
-        query={{
-          key: GOOGLE_API_KEY,
-          language: 'es',
-          region: 'mx',
-        }}
-        styles={autoCompleteStyles}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleConfirm}>
-        <Text style={styles.buttonText}>Ver ruta</Text>
-      </TouchableOpacity>
+      <FlatList
+        data={suggestions}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleSelect(item)}>
+            <Text style={styles.item}>{item.name}</Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      <Button title="Ver en mapa" onPress={goToMap} />
     </View>
   );
-}
-
-const autoCompleteStyles = {
-  container: { flex: 0, marginBottom: 15 },
-  textInput: {
-    height: 50,
-    fontSize: 16,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#f0f0f0',
-  },
 };
 
 const styles = StyleSheet.create({
   container: {
+    padding: 20,
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 15,
-    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 22,
-    marginBottom: 20,
+  label: {
     fontWeight: 'bold',
+    marginTop: 10,
   },
-  button: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
+  input: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    marginBottom: 5,
   },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: 'bold',
+  item: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
+
+export default LocationSearchScreen;
