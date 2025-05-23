@@ -1,5 +1,4 @@
-// screens/LocationSearchScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -10,37 +9,42 @@ import {
   Button,
   Keyboard,
 } from 'react-native';
+import { fetchLugares } from '../api';
 
 const LocationSearchScreen = ({ navigation }) => {
   const [originQuery, setOriginQuery] = useState('');
   const [destinationQuery, setDestinationQuery] = useState('');
+  const [allLocations, setAllLocations] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedOrigin, setSelectedOrigin] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
-  const [activeInput, setActiveInput] = useState(null); // 'origin' | 'destination'
+  const [activeInput, setActiveInput] = useState(null);
 
-  const fetchSuggestions = async (text) => {
-    if (text.length < 2) {
-      setSuggestions([]);
-      return;
-    }
+  useEffect(() => {
+    const loadLocations = async () => {
+      const lugares = await fetchLugares();
+      setAllLocations(lugares);
+    };
+    loadLocations();
+  }, []);
 
-    try {
-      const response = await fetch(`http://10.0.2.2:3000/search?q=${text}`);
-      const data = await response.json();
-      setSuggestions(data);
-    } catch (error) {
-      console.error(error);
-    }
+  const filterSuggestions = (text) => {
+    const filtered = allLocations.filter(
+      (item) =>
+        item.Nombre &&
+        item.Nombre.toLowerCase().includes(text.toLowerCase())
+    );
+
+    setSuggestions(filtered.slice(0, 10));
   };
 
   const handleSelect = (item) => {
     if (activeInput === 'origin') {
       setSelectedOrigin(item);
-      setOriginQuery(item.name);
+      setOriginQuery(item.Nombre);
     } else if (activeInput === 'destination') {
       setSelectedDestination(item);
-      setDestinationQuery(item.name);
+      setDestinationQuery(item.Nombre);
     }
 
     setSuggestions([]);
@@ -54,9 +58,22 @@ const LocationSearchScreen = ({ navigation }) => {
     }
 
     navigation.navigate('MapScreen', {
-      origin: selectedOrigin,
-      destination: selectedDestination,
-    });
+      origin: {
+        latitude: parseFloat(selectedOrigin.Latitud),
+        longitude: parseFloat(selectedOrigin.Longitud),
+        name: selectedOrigin.Nombre,
+        category: selectedDestination.Categoria,
+      },
+      destination: {
+        latitude: parseFloat(selectedDestination.Latitud),
+        longitude: parseFloat(selectedDestination.Longitud),
+        name: selectedDestination.Nombre,
+        category: selectedDestination.Categoria,
+      },
+      categories: ['Museo', 'Templo', 'Restaurante']
+});
+
+
   };
 
   return (
@@ -69,7 +86,7 @@ const LocationSearchScreen = ({ navigation }) => {
         onChangeText={(text) => {
           setOriginQuery(text);
           setActiveInput('origin');
-          fetchSuggestions(text);
+          filterSuggestions(text);
         }}
       />
 
@@ -81,7 +98,7 @@ const LocationSearchScreen = ({ navigation }) => {
         onChangeText={(text) => {
           setDestinationQuery(text);
           setActiveInput('destination');
-          fetchSuggestions(text);
+          filterSuggestions(text);
         }}
       />
 
@@ -90,7 +107,7 @@ const LocationSearchScreen = ({ navigation }) => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => handleSelect(item)}>
-            <Text style={styles.item}>{item.name}</Text>
+            <Text style={styles.item}>{item.Nombre}</Text>
           </TouchableOpacity>
         )}
       />

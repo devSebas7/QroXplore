@@ -1,13 +1,15 @@
+// api.js
 import axios from 'axios';
 
-const API_URL = 'https://abc12345.ngrok.io'; // Reemplaza con tu URL ngrok
+// Tu URL válida de Ngrok
+const API_URL = 'https://12ad-2806-264-4482-c39-4060-60b5-e133-1f84.ngrok-free.app';
 
 export const fetchLugares = async () => {
   try {
-    const response = await axios.get($,{API_URL}/puntos);
+    const response = await axios.get(`${API_URL}/lugares`);
     return response.data;
   } catch (error) {
     console.error('Error al obtener los lugares:', error);
-    return [];
-  }
+    return [];
+  }
 };

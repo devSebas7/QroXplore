@@ -1,9 +1,16 @@
-// screens/MapScreen.js
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, ActivityIndicator, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import polyline from '@mapbox/polyline';
+import { Picker } from '@react-native-picker/picker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -14,8 +21,9 @@ export default function MapScreen() {
   const [routeCoords, setRouteCoords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState(['', '', '']);
 
-  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ'; // Reemplaza si necesitas protegerlo
+  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
 
   const fetchRoute = async () => {
     if (!origin || !destination) {
@@ -48,6 +56,17 @@ export default function MapScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCategoryChange = (value, index) => {
+    const updated = [...selectedCategories];
+    updated[index] = value;
+    setSelectedCategories(updated);
+  };
+
+  const handleGenerateRoute = () => {
+    console.log('Categorías seleccionadas:', selectedCategories);
+    // Aquí puedes llamar a tu modelo de IA con las categorías en orden
   };
 
   useFocusEffect(
@@ -87,23 +106,62 @@ export default function MapScreen() {
         <Marker
           coordinate={{ latitude: origin.latitude, longitude: origin.longitude }}
           title="Origen"
-          description={origin.name}
+          description={origin.Nombre}
           pinColor="green"
         />
         <Marker
           coordinate={{ latitude: destination.latitude, longitude: destination.longitude }}
           title="Destino"
-          description={destination.name}
+          description={destination.Nombre}
           pinColor="red"
         />
         {routeCoords.length > 0 && (
-          <Polyline
-            coordinates={routeCoords}
-            strokeWidth={4}
-            strokeColor="blue"
-          />
+          <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="blue" />
         )}
       </MapView>
+
+      {/* Panel de selección de categorías */}
+      <View style={styles.bottomPanel}>
+        <Text style={styles.label}>Categoría #1</Text>
+        <Picker
+          selectedValue={selectedCategories[0]}
+          style={styles.picker}
+          onValueChange={(itemValue) => handleCategoryChange(itemValue, 0)}
+        >
+          <Picker.Item label="Selecciona una categoría" value="" />
+          <Picker.Item label="Museos" value="museos" />
+          <Picker.Item label="Restaurantes" value="restaurantes" />
+          <Picker.Item label="Templos" value="templos" />
+        </Picker>
+
+        <Text style={styles.label}>Categoría #2</Text>
+        <Picker
+          selectedValue={selectedCategories[1]}
+          style={styles.picker}
+          onValueChange={(itemValue) => handleCategoryChange(itemValue, 1)}
+        >
+          <Picker.Item label="Selecciona una categoría" value="" />
+          <Picker.Item label="Museos" value="museos" />
+          <Picker.Item label="Restaurantes" value="restaurantes" />
+          <Picker.Item label="Templos" value="templos" />
+        </Picker>
+
+        <Text style={styles.label}>Categoría #3</Text>
+        <Picker
+          selectedValue={selectedCategories[2]}
+          style={styles.picker}
+          onValueChange={(itemValue) => handleCategoryChange(itemValue, 2)}
+        >
+          <Picker.Item label="Selecciona una categoría" value="" />
+          <Picker.Item label="Museos" value="museos" />
+          <Picker.Item label="Restaurantes" value="restaurantes" />
+          <Picker.Item label="Templos" value="templos" />
+        </Picker>
+
+        <TouchableOpacity style={styles.button} onPress={handleGenerateRoute}>
+          <Text style={styles.buttonText}>GENERAR RUTA RECOMENDADA</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -120,5 +178,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bottomPanel: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    elevation: 10,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  picker: {
+    height: 50,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  button: {
+    marginTop: 20,
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

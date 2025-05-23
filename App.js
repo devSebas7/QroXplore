@@ -13,7 +13,7 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="LocationSearchTest">
+      <Stack.Navigator initialRouteName="LocationSearch">
         <Stack.Screen
           name="LocationSearch"
           component={LocationSearchScreen}
