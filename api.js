@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Tu URL válida de Ngrok
-const API_URL = 'https://12ad-2806-264-4482-c39-4060-60b5-e133-1f84.ngrok-free.app';
+const API_URL = 'https://9f76-2806-264-4482-c39-4060-60b5-e133-1f84.ngrok-free.app';
 
 export const fetchLugares = async () => {
   try {

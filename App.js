@@ -1,7 +1,7 @@
-// App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { PlacesProvider } from './context/PlacesContext'; // Asegúrate que la ruta sea correcta
 
 // Importa tus pantallas
 import LocationSearchScreen from './screens/LocationSearchScreen';
@@ -12,24 +12,26 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="LocationSearch">
-        <Stack.Screen
-          name="LocationSearch"
-          component={LocationSearchScreen}
-          options={{ title: 'Buscar Ruta' }}
-        />
-        <Stack.Screen
-          name="MapScreen"
-          component={MapScreen}
-          options={{ title: 'Mapa de Ruta' }}
-        />
-        <Stack.Screen
-          name="LocationSearchTest"
-          component={LocationSearchScreenTest}
-          options={{ title: 'Buscar Ruta Test' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <PlacesProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="LocationSearch">
+          <Stack.Screen
+            name="LocationSearch"
+            component={LocationSearchScreen}
+            options={{ title: 'Buscar Ruta' }}
+          />
+          <Stack.Screen
+            name="MapScreen"
+            component={MapScreen}
+            options={{ title: 'Mapa de Ruta' }}
+          />
+          <Stack.Screen
+            name="LocationSearchTest"
+            component={LocationSearchScreenTest}
+            options={{ title: 'Buscar Ruta Test' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PlacesProvider>
   );
 }

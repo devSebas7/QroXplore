@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,33 +10,38 @@ import {
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import polyline from '@mapbox/polyline';
-import { Picker } from '@react-native-picker/picker';
+import { PlacesContext } from '../context/PlacesContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function MapScreen() {
   const route = useRoute();
   const { origin, destination } = route.params || {};
+  const { 
+    optimizedRoute, 
+    generateRoute, 
+    selectedCategories,
+    isLoading: contextLoading
+  } = useContext(PlacesContext);
 
   const [routeCoords, setRouteCoords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState(['', '', '']);
 
   const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
 
-  const fetchRoute = async () => {
+  const fetchRoute = useCallback(async () => {
     if (!origin || !destination) {
       setErrorMessage('No se recibió origen o destino válidos.');
       setLoading(false);
       return;
     }
 
-    const originParam = `${origin.latitude},${origin.longitude}`;
-    const destParam = `${destination.latitude},${destination.longitude}`;
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originParam}&destination=${destParam}&key=${GOOGLE_API_KEY}`;
-
     try {
+      const originParam = `${origin.latitude},${origin.longitude}`;
+      const destParam = `${destination.latitude},${destination.longitude}`;
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originParam}&destination=${destParam}&key=${GOOGLE_API_KEY}`;
+
       const response = await fetch(url);
       const data = await response.json();
 
@@ -56,26 +61,41 @@ export default function MapScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [origin, destination]);
 
-  const handleCategoryChange = (value, index) => {
-    const updated = [...selectedCategories];
-    updated[index] = value;
-    setSelectedCategories(updated);
-  };
+  const handleGenerateRoute = async () => {
+    if (!origin || !destination) {
+      setErrorMessage('Selecciona origen y destino primero');
+      return;
+    }
+    if (!selectedCategories || selectedCategories.length === 0) {
+      setErrorMessage('Selecciona al menos una categoría');
+      return;
+    }
 
-  const handleGenerateRoute = () => {
-    console.log('Categorías seleccionadas:', selectedCategories);
-    // Aquí puedes llamar a tu modelo de IA con las categorías en orden
+    setLoading(true);
+    try {
+      await generateRoute();
+      
+      const coords = optimizedRoute.map(place => ({
+        latitude: typeof place.Latitud === 'string' ? parseFloat(place.Latitud) : place.Latitud,
+        longitude: typeof place.Longitud === 'string' ? parseFloat(place.Longitud) : place.Longitud,
+      }));
+      setRouteCoords(coords);
+    } catch (error) {
+      setErrorMessage(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useFocusEffect(
     useCallback(() => {
       fetchRoute();
-    }, [origin, destination])
+    }, [fetchRoute])
   );
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4A90E2" />
@@ -106,60 +126,55 @@ export default function MapScreen() {
         <Marker
           coordinate={{ latitude: origin.latitude, longitude: origin.longitude }}
           title="Origen"
-          description={origin.Nombre}
+          description={origin.name}
           pinColor="green"
         />
         <Marker
           coordinate={{ latitude: destination.latitude, longitude: destination.longitude }}
           title="Destino"
-          description={destination.Nombre}
+          description={destination.name}
           pinColor="red"
         />
+
+        {optimizedRoute.map((place, index) => {
+          const lat = typeof place.Latitud === 'string' ? parseFloat(place.Latitud) : place.Latitud;
+          const lng = typeof place.Longitud === 'string' ? parseFloat(place.Longitud) : place.Longitud;
+          
+          return (
+            <Marker
+              key={`stop-${index}`}
+              coordinate={{ latitude: lat, longitude: lng }}
+              title={`${index + 1}. ${place.Nombre}`}
+              description={place.Categoria}
+              pinColor="#3498db"
+            />
+          );
+        })}
+
         {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="blue" />
+          <Polyline 
+            coordinates={routeCoords} 
+            strokeWidth={4} 
+            strokeColor="blue" 
+          />
         )}
       </MapView>
 
-      {/* Panel de selección de categorías */}
       <View style={styles.bottomPanel}>
-        <Text style={styles.label}>Categoría #1</Text>
-        <Picker
-          selectedValue={selectedCategories[0]}
-          style={styles.picker}
-          onValueChange={(itemValue) => handleCategoryChange(itemValue, 0)}
+        <Text style={styles.selectedCategoriesText}>
+          Itinerario: {selectedCategories.map((cat, i) => `${i + 1}. ${cat}`).join(', ')}
+        </Text>
+        
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleGenerateRoute}
+          disabled={loading}
         >
-          <Picker.Item label="Selecciona una categoría" value="" />
-          <Picker.Item label="Museos" value="museos" />
-          <Picker.Item label="Restaurantes" value="restaurantes" />
-          <Picker.Item label="Templos" value="templos" />
-        </Picker>
-
-        <Text style={styles.label}>Categoría #2</Text>
-        <Picker
-          selectedValue={selectedCategories[1]}
-          style={styles.picker}
-          onValueChange={(itemValue) => handleCategoryChange(itemValue, 1)}
-        >
-          <Picker.Item label="Selecciona una categoría" value="" />
-          <Picker.Item label="Museos" value="museos" />
-          <Picker.Item label="Restaurantes" value="restaurantes" />
-          <Picker.Item label="Templos" value="templos" />
-        </Picker>
-
-        <Text style={styles.label}>Categoría #3</Text>
-        <Picker
-          selectedValue={selectedCategories[2]}
-          style={styles.picker}
-          onValueChange={(itemValue) => handleCategoryChange(itemValue, 2)}
-        >
-          <Picker.Item label="Selecciona una categoría" value="" />
-          <Picker.Item label="Museos" value="museos" />
-          <Picker.Item label="Restaurantes" value="restaurantes" />
-          <Picker.Item label="Templos" value="templos" />
-        </Picker>
-
-        <TouchableOpacity style={styles.button} onPress={handleGenerateRoute}>
-          <Text style={styles.buttonText}>GENERAR RUTA RECOMENDADA</Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.buttonText}>GENERAR RUTA RECOMENDADA</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -189,19 +204,14 @@ const styles = StyleSheet.create({
     width: '100%',
     elevation: 10,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  picker: {
-    height: 50,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+  selectedCategoriesText: {
+    fontSize: 14,
+    marginVertical: 10,
+    textAlign: 'center',
+    color: '#333',
   },
   button: {
-    marginTop: 20,
+    marginTop: 10,
     backgroundColor: '#4A90E2',
     paddingVertical: 12,
     borderRadius: 10,
