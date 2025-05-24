@@ -8,7 +8,8 @@ import {
   Keyboard,
   ActivityIndicator,
   PanResponder,
-  Animated
+  Animated,
+  Alert
 } from 'react-native';
 import { fetchLugares } from '../api';
 import { PlacesContext } from '../context/PlacesContext';
@@ -30,7 +31,9 @@ const LocationSearchScreen = ({ navigation }) => {
     selectedCategories, 
     setSelectedCategories,
     setOrigin,
-    setDestination 
+    setDestination,
+    generateRoute,
+    isLoading: isGeneratingRoute
   } = useContext(PlacesContext);
 
   // Animación para el arrastre
@@ -49,7 +52,6 @@ const LocationSearchScreen = ({ navigation }) => {
       { 
         useNativeDriver: false,
         listener: (evt, gestureState) => {
-          // Limitar el movimiento vertical para mejor experiencia
           const newY = Math.max(-100, Math.min(100, gestureState.dy));
           pan.y.setValue(newY);
         }
@@ -59,10 +61,6 @@ const LocationSearchScreen = ({ navigation }) => {
       pan.flattenOffset();
       setDraggingIndex(null);
     },
-    onPanResponderTerminate: () => {
-      pan.flattenOffset();
-      setDraggingIndex(null);
-    }
   });
 
   useEffect(() => {
@@ -72,6 +70,7 @@ const LocationSearchScreen = ({ navigation }) => {
         setAllLocations(lugares);
       } catch (error) {
         console.error('Error loading locations:', error);
+        Alert.alert('Error', 'No se pudieron cargar los lugares');
       } finally {
         setLoading(false);
       }
@@ -110,43 +109,32 @@ const LocationSearchScreen = ({ navigation }) => {
     setDraggingIndex(index);
   };
 
-  const handleDragEnd = () => {
-    // Aquí puedes implementar la lógica para reordenar las categorías
-    // basado en la posición final del elemento arrastrado
-    setDraggingIndex(null);
-    pan.setValue({ x: 0, y: 0 });
-  };
-
-  const goToMap = () => {
+  const goToRouteScreen = async () => {
     if (!selectedOrigin || !selectedDestination) {
-      alert('Selecciona tanto el origen como el destino');
+      Alert.alert('Error', 'Selecciona tanto el origen como el destino');
       return;
     }
 
     if (selectedCategories.length === 0) {
-      alert('Selecciona al menos una categoría');
+      Alert.alert('Error', 'Selecciona al menos una categoría');
       return;
     }
 
-    setOrigin(selectedOrigin);
-    setDestination(selectedDestination);
-
-    navigation.navigate('MapScreen', {
-      origin: {
-        latitude: parseFloat(selectedOrigin.Latitud),
-        longitude: parseFloat(selectedOrigin.Longitud),
-        name: selectedOrigin.Nombre,
-        Latitud: selectedOrigin.Latitud,
-        Longitud: selectedOrigin.Longitud
-      },
-      destination: {
-        latitude: parseFloat(selectedDestination.Latitud),
-        longitude: parseFloat(selectedDestination.Longitud),
-        name: selectedDestination.Nombre,
-        Latitud: selectedDestination.Latitud,
-        Longitud: selectedDestination.Longitud
-      }
+    // Guardar en el contexto
+    setOrigin({
+      latitude: parseFloat(selectedOrigin.Latitud),
+      longitude: parseFloat(selectedOrigin.Longitud),
+      name: selectedOrigin.Nombre
     });
+    
+    setDestination({
+      latitude: parseFloat(selectedDestination.Latitud),
+      longitude: parseFloat(selectedDestination.Longitud),
+      name: selectedDestination.Nombre
+    });
+
+    // Navegar a RouteScreen
+    navigation.navigate('RouteScreen');
   };
 
   if (loading) {
@@ -186,18 +174,20 @@ const LocationSearchScreen = ({ navigation }) => {
         />
 
         {/* Lista de sugerencias */}
-        <View style={styles.suggestionsList}>
-          {suggestions.map((item) => (
-            <TouchableOpacity 
-              key={item.id.toString()}
-              style={styles.suggestionItem}
-              onPress={() => handleSelect(item)}
-            >
-              <Text style={styles.itemText}>{item.Nombre}</Text>
-              <Text style={styles.itemSubtext}>{item.Categoria}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {suggestions.length > 0 && (
+          <View style={styles.suggestionsList}>
+            {suggestions.map((item) => (
+              <TouchableOpacity 
+                key={item.id.toString()}
+                style={styles.suggestionItem}
+                onPress={() => handleSelect(item)}
+              >
+                <Text style={styles.itemText}>{item.Nombre}</Text>
+                <Text style={styles.itemSubtext}>{item.Categoria}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Selector de Categorías con Ordenamiento */}
@@ -221,7 +211,6 @@ const LocationSearchScreen = ({ navigation }) => {
                 }
               ]}
               onTouchStart={() => handleDragStart(index)}
-              onTouchEnd={handleDragEnd}
             >
               <Text style={styles.orderNumber}>{index + 1}</Text>
               <Text style={styles.categoryText}>{category}</Text>
@@ -256,10 +245,14 @@ const LocationSearchScreen = ({ navigation }) => {
           styles.button, 
           (!selectedOrigin || !selectedDestination || selectedCategories.length === 0) && styles.disabledButton
         ]}
-        onPress={goToMap}
-        disabled={!selectedOrigin || !selectedDestination || selectedCategories.length === 0}
+        onPress={goToRouteScreen}
+        disabled={!selectedOrigin || !selectedDestination || selectedCategories.length === 0 || isGeneratingRoute}
       >
-        <Text style={styles.buttonText}>Ver Ruta en Mapa</Text>
+        {isGeneratingRoute ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={styles.buttonText}>Ver Ruta Peatonal</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -305,12 +298,17 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 15,
-    marginBottom: 20,
+    marginBottom: 15,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
   suggestionsList: {
     maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    marginTop: -10,
+    marginBottom: 15,
   },
   suggestionItem: {
     padding: 15,
