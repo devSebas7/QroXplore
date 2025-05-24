@@ -28,7 +28,7 @@ export default function MapScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ';
+  const GOOGLE_API_KEY = 'AIzaSyDQI2O5wMO_b_w9Z9yfH1vMxY1czhXrRxQ'; // Reemplaza con tu API key
 
   const fetchRoute = useCallback(async () => {
     if (!origin || !destination) {
@@ -77,11 +77,14 @@ export default function MapScreen() {
     try {
       await generateRoute();
       
-      const coords = optimizedRoute.map(place => ({
-        latitude: typeof place.Latitud === 'string' ? parseFloat(place.Latitud) : place.Latitud,
-        longitude: typeof place.Longitud === 'string' ? parseFloat(place.Longitud) : place.Longitud,
-      }));
-      setRouteCoords(coords);
+      if (optimizedRoute?.polyline) {
+        const points = polyline.decode(optimizedRoute.polyline);
+        const coords = points.map(([lat, lng]) => ({
+          latitude: lat,
+          longitude: lng,
+        }));
+        setRouteCoords(coords);
+      }
     } catch (error) {
       setErrorMessage(`Error: ${error.message}`);
     } finally {
@@ -136,14 +139,17 @@ export default function MapScreen() {
           pinColor="red"
         />
 
-        {optimizedRoute.map((place, index) => {
+        {optimizedRoute?.waypoints?.map((place, index) => {
           const lat = typeof place.Latitud === 'string' ? parseFloat(place.Latitud) : place.Latitud;
           const lng = typeof place.Longitud === 'string' ? parseFloat(place.Longitud) : place.Longitud;
           
           return (
             <Marker
               key={`stop-${index}`}
-              coordinate={{ latitude: lat, longitude: lng }}
+              coordinate={{ 
+                latitude: place.latitude || lat, 
+                longitude: place.longitude || lng 
+              }}
               title={`${index + 1}. ${place.Nombre}`}
               description={place.Categoria}
               pinColor="#3498db"

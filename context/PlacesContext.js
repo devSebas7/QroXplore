@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { fetchLugares } from '../api';
-import { optimizeRoute } from '../services/routeOptimizer'; // Asegúrate de que la ruta sea correcta
+import { optimizeRoute } from '../services/routeOptimizer';
 
 export const PlacesContext = createContext();
 
@@ -9,7 +9,12 @@ export const PlacesProvider = ({ children }) => {
   const [destination, setDestination] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [allPlaces, setAllPlaces] = useState([]);
-  const [optimizedRoute, setOptimizedRoute] = useState([]);
+  const [optimizedRoute, setOptimizedRoute] = useState({
+    waypoints: [],
+    polyline: '',
+    legs: [],
+    orderedCategories: []
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,15 +53,21 @@ export const PlacesProvider = ({ children }) => {
       const route = await optimizeRoute(
         origin,
         destination,
-        selectedCategories, // Orden definido por el usuario
+        selectedCategories,
         allPlaces
       );
 
-      if (!route || route.length === 0) {
+      if (!route || !route.polyline) {
         throw new Error("No se pudo generar una ruta válida");
       }
 
-      setOptimizedRoute(route);
+      setOptimizedRoute({
+        waypoints: route.waypoints,
+        polyline: route.polyline,
+        legs: route.legs,
+        orderedCategories: selectedCategories
+      });
+
       return route;
     } catch (err) {
       setError(err.message || "Error generando ruta optimizada");
@@ -69,7 +80,12 @@ export const PlacesProvider = ({ children }) => {
 
   // Función para resetear el estado
   const resetRoute = () => {
-    setOptimizedRoute([]);
+    setOptimizedRoute({
+      waypoints: [],
+      polyline: '',
+      legs: [],
+      orderedCategories: []
+    });
     setError(null);
   };
 
